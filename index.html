@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Spin Wheel - By NotDelta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background: #18191a;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        .main-flex {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            gap: 32px;
+            padding: 32px 0;
+        }
+
+        .wheel-area {
+            background: #222;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.25);
+            padding: 32px 32px 24px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 420px;
+            max-width: 95vw;
+        }
+
+        .wheel-title {
+            font-size: 2.1em;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #fff;
+            text-shadow: 0 2px 8px #0008;
+        }
+
+        .wheel-canvas {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            margin-bottom: 18px;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            left: 50%;
+            top: -32px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 22px solid transparent;
+            border-right: 22px solid transparent;
+            border-bottom: 36px solid #ffd600;
+            z-index: 2;
+            filter: drop-shadow(0 2px 6px #0008);
+        }
+
+        canvas#wheel {
+            border-radius: 50%;
+            background: #111;
+            box-shadow: 0 0 32px #000a;
+            display: block;
+        }
+
+        .spin-btn {
+            padding: 14px 40px;
+            font-size: 1.2em;
+            background: linear-gradient(90deg, #ff9800 0%, #ffc107 100%);
+            color: #222;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 8px #0005;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .spin-btn:active {
+            background: linear-gradient(90deg, #e65100 0%, #ffd54f 100%);
+            transform: scale(0.97);
+        }
+
+        .spin-btn:disabled {
+            background: #bbb;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .spin-btn:hover:not(:disabled) {
+            box-shadow: 0 0 16px 4px #ffd600, 0 2px 8px #0005;
+            background: linear-gradient(90deg, #ffd600 0%, #ff9800 100%);
+            color: #222;
+        }
+
+        .result {
+            margin-top: 18px;
+            font-size: 1.3em;
+            font-weight: bold;
+            min-height: 32px;
+            color: #ffeb3b;
+            text-shadow: 0 2px 8px #000a;
+        }
+
+        .results-history {
+            margin-top: 24px;
+            background: #18191a;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px #0003;
+            padding: 18px 18px 10px 18px;
+            min-width: 320px;
+            max-width: 420px;
+        }
+
+        .results-history-title {
+            color: #ffd600;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .results-history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            color: #fff;
+            font-size: 1.08em;
+        }
+
+        .results-history-list li {
+            padding: 6px 0 6px 0;
+            border-bottom: 1px solid #2226;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s, box-shadow 0.2s;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .results-history-list li:last-child {
+            border-bottom: none;
+        }
+
+        .results-history-list li:hover {
+            background: #23272b;
+            box-shadow: 0 0 12px 2px #ffd600cc;
+            color: #ffd600;
+            font-weight: bold;
+        }
+
+        /* --- Modern Side Panel --- */
+
+        .side-panel {
+            background: linear-gradient(135deg, #23272b 60%, #232b33 100%);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+            padding: 32px 22px 22px 22px;
+            min-width: 280px;
+            max-width: 380px;
+            margin-top: 8px;
+            border: 2px solid #232b33;
+            transition: box-shadow 0.2s, border 0.2s;
+            position: relative;
+            overflow: visible;
+        }
+
+        .side-panel:before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            pointer-events: none;
+            box-shadow: 0 0 0 4px #3973e7cc;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .side-panel:focus-within:before,
+        .side-panel:hover:before {
+            opacity: 1;
+        }
+
+        .side-panel h3 {
+            margin: 0 0 18px 0;
+            color: #fff;
+            font-size: 1.3em;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 8px #0006;
+        }
+
+        .panel-btns {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+            justify-content: flex-start;
+        }
+
+        .panel-btns button {
+            padding: 10px 26px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1.08em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+            box-shadow: 0 2px 8px #0002;
+            outline: none;
+            letter-spacing: 0.5px;
+        }
+
+        .panel-btns .shuffle-btn {
+            background: linear-gradient(90deg, #2196f3 60%, #21cbf3 100%);
+            color: #fff;
+        }
+
+        .panel-btns .shuffle-btn:hover {
+            background: linear-gradient(90deg, #1565c0 60%, #21cbf3 100%);
+            box-shadow: 0 0 12px 2px #2196f3cc;
+        }
+
+        .panel-btns .sort-btn {
+            background: linear-gradient(90deg, #ffb300 60%, #ffd54f 100%);
+            color: #222;
+        }
+
+        .panel-btns .sort-btn:hover {
+            background: linear-gradient(90deg, #ff9800 60%, #ffd54f 100%);
+            color: #fff;
+            box-shadow: 0 0 12px 2px #ffd600cc;
+        }
+
+        .panel-btns .clear-btn {
+            background: linear-gradient(90deg, #e91e63 60%, #ff80ab 100%);
+            color: #fff;
+        }
+
+        .panel-btns .clear-btn:hover {
+            background: linear-gradient(90deg, #ad1457 60%, #ff80ab 100%);
+            box-shadow: 0 0 12px 2px #e91e63cc;
+        }
+
+        .side-panel textarea {
+            width: 100%;
+            min-height: 180px;
+            border-radius: 12px;
+            border: 2px solid #333a;
+            background: #18191a;
+            color: #fff;
+            font-size: 1.1em;
+            padding: 14px;
+            margin-bottom: 0;
+            resize: vertical;
+            font-family: 'Fira Mono', 'Consolas', monospace;
+            box-shadow: 0 2px 8px #0002;
+            transition: border 0.18s, box-shadow 0.18s;
+        }
+
+        .side-panel textarea:focus {
+            border: 2px solid #3973e7;
+            box-shadow: 0 4px 16px #3973e733;
+            outline: none;
+        }
+
+        @media (max-width: 900px) {
+            .main-flex {
+                flex-direction: column;
+                align-items: center;
+                gap: 18px;
+            }
+
+            .wheel-area {
+                min-width: 0;
+                width: 98vw;
+            }
+
+            .side-panel {
+                min-width: 0;
+                width: 98vw;
+                max-width: 98vw;
+            }
+
+            .results-history {
+                min-width: 0;
+                width: 98vw;
+                max-width: 98vw;
+            }
+        }
+
+        /* Winner Popup (unchanged) */
+
+        .winner-popup-bg {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .winner-popup {
+            background: #23272b;
+            border-radius: 10px;
+            box-shadow: 0 4px 32px #000a;
+            min-width: 320px;
+            max-width: 90vw;
+            padding: 0;
+            overflow: hidden;
+            animation: popupIn 0.25s;
+        }
+
+        @keyframes popupIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .winner-popup-header {
+            background: #3973e7;
+            color: #fff;
+            font-size: 1.15em;
+            font-weight: 600;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .winner-popup-header .close-x {
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #fff;
+            background: none;
+            border: none;
+            margin-left: 12px;
+        }
+
+        .winner-popup-content {
+            padding: 28px 18px 18px 18px;
+            background: #23272b;
+            color: #fff;
+            text-align: center;
+        }
+
+        .winner-popup-content .winner-name {
+            font-size: 2.5em;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .winner-popup-footer {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 18px 16px 18px;
+            background: #23272b;
+        }
+
+        .winner-popup-footer button {
+            padding: 7px 18px;
+            border-radius: 6px;
+            border: none;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .winner-popup-footer .close-btn {
+            background: none;
+            color: #fff;
+        }
+
+        .winner-popup-footer .close-btn:hover {
+            text-decoration: underline;
+        }
+
+        .winner-popup-footer .remove-btn {
+            background: #3973e7;
+            color: #fff;
+        }
+
+        .winner-popup-footer .remove-btn:hover {
+            background: #1746a0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-flex">
+        <div class="wheel-area">
+            <div class="wheel-title">Spin Wheel</div>
+            <div class="wheel-canvas" style="position:relative;">
+                <div class="wheel-pointer"></div>
+                <canvas id="wheel" width="340" height="340"></canvas>
+            </div>
+            <button class="spin-btn" id="spinBtn" onclick="spinWheel()">SPIN</button>
+            <div class="result" id="result"></div>
+            <div class="results-history" id="resultsHistory">
+                <div class="results-history-title">Spin Results</div>
+                <ul class="results-history-list" id="resultsHistoryList"></ul>
+            </div>
+        </div>
+        <div class="side-panel">
+            <h3>Entries <span id="entryCount"></span></h3>
+            <div class="panel-btns">
+                <button class="shuffle-btn" onclick="shuffleEntries()">Shuffle</button>
+                <button class="sort-btn" onclick="sortEntries()">Sort</button>
+                <button class="clear-btn" onclick="clearEntries()">Clear</button>
+            </div>
+            <textarea id="entriesInput" placeholder="Enter one entry per line..."></textarea>
+        </div>
+    </div>
+    <!-- Winner Popup -->
+    <div id="winnerPopupBg" class="winner-popup-bg" style="display:none;">
+        <div class="winner-popup">
+            <div class="winner-popup-header">
+                We have a winner!
+                <button class="close-x" onclick="closeWinnerPopup()">&times;</button>
+            </div>
+            <div class="winner-popup-content">
+                <div class="winner-name" id="winnerName"></div>
+            </div>
+            <div class="winner-popup-footer">
+                <button class="close-btn" onclick="closeWinnerPopup()">Close</button>
+                <button class="remove-btn" onclick="removeWinner()">Remove</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // --- Wheel logic ---
+        let entries = ['Ali', 'Beatriz', 'Charles', 'Diya', 'Eric', 'Fatima', 'Gabriel', 'Hanna'];
+        let spinning = false;
+        let currentAngle = 0;
+        let lastWinner = null;
+        let lastWinnerIdx = null;
+        let resultsHistory = [];
+
+        function drawWheel() {
+            const canvas = document.getElementById('wheel');
+            const ctx = canvas.getContext('2d');
+            const n = entries.length;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 8;
+            const colors = [
+                '#fbc02d', '#1976d2', '#e53935', '#43a047', '#8e24aa', '#f44336', '#00acc1', '#ffb300', '#388e3c', '#3949ab'
+            ];
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < n; i++) {
+                const startAngle = (2 * Math.PI / n) * i + currentAngle;
+                const endAngle = startAngle + 2 * Math.PI / n;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.save();
+                // Draw text
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + Math.PI / n);
+                ctx.textAlign = "right";
+                ctx.font = "bold 1.25em 'Segoe UI', Arial";
+                ctx.fillStyle = "#fff";
+                ctx.shadowColor = "#000";
+                ctx.shadowBlur = 4;
+                ctx.fillText(entries[i], radius - 18, 10);
+                ctx.restore();
+            }
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 48, 0, 2 * Math.PI);
+            ctx.fillStyle = "#fff";
+            ctx.shadowColor = "#000";
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function updateEntryCount() {
+            document.getElementById('entryCount').textContent = `(${entries.length})`;
+        }
+
+        function updateEntriesInput() {
+            document.getElementById('entriesInput').value = entries.join('\n');
+            updateEntryCount();
+        }
+
+        function spinWheel() {
+            if (spinning || entries.length < 2) return;
+            spinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('result').textContent = '';
+
+            // Pick winner
+            const n = entries.length;
+            const winnerIdx = Math.floor(Math.random() * n);
+            const degPerSegment = 360 / n;
+            const stopAngle = 360 - (winnerIdx * degPerSegment + degPerSegment / 2);
+            const extraSpins = 5;
+            const finalDeg = 360 * extraSpins + stopAngle;
+            let start = currentAngle * 180 / Math.PI;
+            let end = finalDeg;
+            let startTime = null;
+
+            function animateWheel(ts) {
+                if (!startTime) startTime = ts;
+                const elapsed = ts - startTime;
+                const duration = 3000;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = progress < 0.5
+                    ? 4 * progress * progress * progress
+                    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                const angle = start + (end - start) * ease;
+                currentAngle = (angle % 360) * Math.PI / 180;
+                drawWheel();
+                if (progress < 1) {
+                    requestAnimationFrame(animateWheel);
+                } else {
+                    currentAngle = (stopAngle % 360) * Math.PI / 180;
+                    drawWheel();
+                    showResult(winnerIdx);
+                    spinning = false;
+                    document.getElementById('spinBtn').disabled = false;
+                }
+            }
+            requestAnimationFrame(animateWheel);
+        }
+
+        function showResult(idx) {
+            lastWinner = entries[idx];
+            lastWinnerIdx = idx;
+            // Show popup
+            document.getElementById('winnerName').textContent = entries[idx];
+            document.getElementById('winnerPopupBg').style.display = 'flex';
+            // Save to results history
+            resultsHistory.unshift(entries[idx]);
+            if (resultsHistory.length > 10) resultsHistory = resultsHistory.slice(0, 10);
+            updateResultsHistory();
+        }
+
+        function closeWinnerPopup() {
+            document.getElementById('winnerPopupBg').style.display = 'none';
+        }
+
+        function removeWinner() {
+            if (lastWinnerIdx !== null && entries.length > 2) {
+                entries.splice(lastWinnerIdx, 1);
+                updateEntriesInput();
+                drawWheel();
+            }
+            closeWinnerPopup();
+        }
+
+        function updateResultsHistory() {
+            const list = document.getElementById('resultsHistoryList');
+            list.innerHTML = '';
+            resultsHistory.forEach((name, idx) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color:#ffd600;font-weight:bold;">${idx + 1}.</span> ${name}`;
+                list.appendChild(li);
+            });
+        }
+
+        // --- Entries panel logic ---
+        function getEntriesFromInput() {
+            const val = document.getElementById('entriesInput').value;
+            return val.split('\n').map(e => e.trim()).filter(e => e);
+        }
+
+        function updateEntriesFromInput() {
+            const newEntries = getEntriesFromInput();
+            if (newEntries.length >= 2) {
+                entries = newEntries;
+                drawWheel();
+                updateEntryCount();
+            }
+        }
+
+        function shuffleEntries() {
+            for (let i = entries.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [entries[i], entries[j]] = [entries[j], entries[i]];
+            }
+            updateEntriesInput();
+            drawWheel();
+        }
+
+        function sortEntries() {
+            entries.sort((a, b) => a.localeCompare(b));
+            updateEntriesInput();
+            drawWheel();
+        }
+
+        function clearEntries() {
+            entries = [];
+            updateEntriesInput();
+            drawWheel();
+        }
+
+        // --- Keyboard shortcut ---
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                spinWheel();
+            }
+            // ESC to close popup
+            if (e.key === "Escape") {
+                closeWinnerPopup();
+            }
+        });
+
+        // --- Input events ---
+        document.getElementById('entriesInput').addEventListener('input', updateEntriesFromInput);
+
+        // --- Initial render ---
+        drawWheel();
+        updateEntriesInput();
+        updateEntryCount();
+    </script>
+</body>
+
+</html>
